@@ -1,10 +1,13 @@
 import { useRef, useState } from 'react';
 import { ingestPdf } from '../api/client';
+import { UPLOAD_BUTTON, UPLOAD_LOADING, UPLOAD_SUCCESS } from '../config/branding';
+import { LoadingDots } from './LoadingDots';
 
 export function IngestPanel() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -23,8 +26,8 @@ export function IngestPanel() {
     setMessage('');
     setError('');
     try {
-      const res = await ingestPdf(file);
-      setMessage(res.message);
+      await ingestPdf(file);
+      setMessage(UPLOAD_SUCCESS);
       setFile(null);
       if (inputRef.current) inputRef.current.value = '';
     } catch (err) {
@@ -35,24 +38,26 @@ export function IngestPanel() {
   };
 
   return (
-    <div className="panel">
-      <h2>Upload PDF</h2>
-      <p className="hint">Ingest a PDF into the vector store for RAG and search.</p>
-
+    <div className="panel panel--ingest">
       <div
-        className="upload-zone"
+        className={`upload-zone ${dragOver ? 'drag-over' : ''} ${loading ? 'loading' : ''}`}
         role="button"
         tabIndex={0}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => !loading && inputRef.current?.click()}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             inputRef.current?.click();
           }
         }}
-        onDragOver={(e) => e.preventDefault()}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
         onDrop={(e) => {
           e.preventDefault();
+          setDragOver(false);
           handleFileChange(e.dataTransfer.files?.[0] ?? null);
         }}
       >
@@ -69,15 +74,17 @@ export function IngestPanel() {
             <path d="M4 17v1a3 3 0 003 3h10a3 3 0 003-3v-1" strokeLinecap="round" />
           </svg>
         </div>
-        <p className="upload-title">{file ? 'Change file' : 'Click to select a PDF'}</p>
-        <p className="upload-subtitle">PDF only · max 10 MB</p>
+        <p className="upload-title">{file ? 'Change file' : 'Drop your PDF here'}</p>
+        <p className="upload-subtitle">PDF only, max 10 MB</p>
         {file && <p className="upload-filename">{file.name}</p>}
       </div>
+
+      {loading && <LoadingDots label={UPLOAD_LOADING} />}
 
       <div className="actions">
         <button className="btn-primary" disabled={!file || loading} onClick={handleSubmit}>
           {loading && <span className="spinner" />}
-          {loading ? 'Ingesting…' : 'Ingest Document'}
+          {loading ? 'Uploading...' : UPLOAD_BUTTON}
         </button>
       </div>
 

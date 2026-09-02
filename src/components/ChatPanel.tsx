@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { streamChat } from '../api/client';
+import { CHAT_EMPTY, CHAT_LOADING, CHAT_PLACEHOLDER } from '../config/branding';
 import { useStreamingText } from '../hooks/useStreamingText';
+import { LoadingDots } from './LoadingDots';
 import { MarkdownStream } from './MarkdownStream';
 
 export function ChatPanel() {
@@ -27,16 +29,14 @@ export function ChatPanel() {
     stream.flush();
   };
 
+  const waitingForFirstToken = stream.isReceiving && !stream.displayed;
+
   return (
     <div className="panel">
-      <h2>Chat</h2>
-      <p className="hint">Direct conversation with Gemini. Responses stream in Markdown.</p>
-
       <div className="field">
-        <label htmlFor="chat-message">Message</label>
         <textarea
           id="chat-message"
-          placeholder="Say hello to Gemini…"
+          placeholder={CHAT_PLACEHOLDER}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={(e) => {
@@ -47,7 +47,8 @@ export function ChatPanel() {
 
       <div className="actions">
         <button className="btn-primary" disabled={!message.trim() || stream.isTyping} onClick={handleSend}>
-          {stream.isTyping ? 'Streaming…' : 'Send'}
+          {stream.isTyping && <span className="spinner" />}
+          {stream.isTyping ? 'Writing...' : 'Send'}
         </button>
         {stream.isTyping && (
           <button className="btn-secondary" type="button" onClick={handleStop}>
@@ -56,13 +57,15 @@ export function ChatPanel() {
         )}
       </div>
 
-      <MarkdownStream
-        content={stream.displayed}
-        streaming={stream.isTyping}
-        placeholder={
-          stream.isReceiving && !stream.displayed ? 'Waiting for response…' : 'Response will stream here.'
-        }
-      />
+      {waitingForFirstToken && <LoadingDots label={CHAT_LOADING} />}
+
+      {!waitingForFirstToken && (
+        <MarkdownStream
+          content={stream.displayed}
+          streaming={stream.isTyping}
+          placeholder={CHAT_EMPTY}
+        />
+      )}
     </div>
   );
 }

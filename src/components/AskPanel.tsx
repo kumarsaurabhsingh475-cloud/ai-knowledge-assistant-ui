@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { streamAsk } from '../api/client';
+import { ASK_LOADING, ASK_PLACEHOLDER } from '../config/branding';
 import { useStreamingText } from '../hooks/useStreamingText';
+import { LoadingDots } from './LoadingDots';
 import { MarkdownStream } from './MarkdownStream';
 
 export function AskPanel() {
@@ -32,16 +34,14 @@ export function AskPanel() {
     stream.flush();
   };
 
+  const waitingForFirstToken = stream.isReceiving && !stream.displayed;
+
   return (
     <div className="panel">
-      <h2>Ask a Question</h2>
-      <p className="hint">Get answers grounded in your uploaded documents (RAG). Responses stream in Markdown.</p>
-
       <div className="field">
-        <label htmlFor="question">Your question</label>
         <textarea
           id="question"
-          placeholder="What is the main topic of the document?"
+          placeholder="What are the key points in my document?"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           onKeyDown={(e) => {
@@ -53,7 +53,7 @@ export function AskPanel() {
       <div className="actions">
         <button className="btn-primary" disabled={!question.trim() || stream.isTyping} onClick={handleSubmit}>
           {stream.isTyping && <span className="spinner" />}
-          {stream.isTyping ? 'Generating…' : 'Ask'}
+          {stream.isTyping ? 'Finding RAG answer...' : 'Get RAG answer'}
         </button>
         {stream.isTyping && (
           <button className="btn-secondary" type="button" onClick={handleStop}>
@@ -64,15 +64,20 @@ export function AskPanel() {
 
       {error && <div className="alert error">{error}</div>}
 
-      <MarkdownStream
-        content={stream.displayed}
-        streaming={stream.isTyping}
-        placeholder={
-          stream.isReceiving && !stream.displayed
-            ? 'Searching documents and generating answer…'
-            : 'Answer will appear here.'
-        }
-      />
+      {waitingForFirstToken && (
+        <>
+          <LoadingDots label={ASK_LOADING} />
+          <div className="skeleton-shimmer" aria-hidden="true" />
+        </>
+      )}
+
+      {!waitingForFirstToken && (
+        <MarkdownStream
+          content={stream.displayed}
+          streaming={stream.isTyping}
+          placeholder={ASK_PLACEHOLDER}
+        />
+      )}
     </div>
   );
 }
