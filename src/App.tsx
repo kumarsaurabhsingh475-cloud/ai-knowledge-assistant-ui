@@ -4,6 +4,7 @@ import { AskPanel } from './components/AskPanel';
 import { ChatPanel } from './components/ChatPanel';
 import { SearchPanel } from './components/SearchPanel';
 import { ThemeToggle } from './components/ThemeToggle';
+import { BACKEND_LABEL } from './config/backend';
 import './App.css';
 
 type Tab = 'ingest' | 'ask' | 'chat' | 'search';
@@ -63,7 +64,7 @@ export default function App() {
       {activeTab === 'search' && <SearchPanel />}
 
       <footer className="footer">
-        <p className="footer-line">Backend: localhost:8080 · Spring Boot + Spring AI + Gemini</p>
+        <p className="footer-line">Backend: {BACKEND_LABEL} · Spring Boot + Spring AI + Gemini</p>
         <p className="footer-credit">Developed by Saurabh Kumar</p>
       </footer>
     </div>

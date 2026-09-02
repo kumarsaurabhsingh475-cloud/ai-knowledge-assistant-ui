@@ -1,4 +1,4 @@
-const BACKEND_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:8080' : '');
+import { BACKEND_URL } from '../config/backend';
 
 /** Dev uses Vite proxy unless VITE_API_URL is set. Production requires VITE_API_URL. */
 const BASE = import.meta.env.DEV && !import.meta.env.VITE_API_URL ? '/api' : BACKEND_URL;
