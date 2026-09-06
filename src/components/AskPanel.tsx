@@ -7,18 +7,23 @@ import { MarkdownStream } from './MarkdownStream';
 
 export function AskPanel() {
   const [question, setQuestion] = useState('');
+  const [activeQuestion, setActiveQuestion] = useState('');
   const [error, setError] = useState('');
   const closeRef = useRef<(() => void) | null>(null);
   const stream = useStreamingText();
 
   const handleSubmit = () => {
-    if (!question.trim() || stream.isTyping) return;
+    const trimmed = question.trim();
+    if (!trimmed || stream.isTyping) return;
+
+    setActiveQuestion(trimmed);
+    setQuestion('');
     setError('');
     stream.reset();
     stream.startReceiving();
 
     closeRef.current = streamAsk(
-      question.trim(),
+      trimmed,
       stream.appendChunk,
       () => stream.finishReceiving(),
       (msg) => {
@@ -35,6 +40,7 @@ export function AskPanel() {
   };
 
   const waitingForFirstToken = stream.isReceiving && !stream.displayed;
+  const showResponse = !waitingForFirstToken;
 
   return (
     <div className="panel">
@@ -62,6 +68,8 @@ export function AskPanel() {
         )}
       </div>
 
+      {activeQuestion && <p className="submitted-prompt">{activeQuestion}</p>}
+
       {error && <div className="alert error">{error}</div>}
 
       {waitingForFirstToken && (
@@ -71,11 +79,11 @@ export function AskPanel() {
         </>
       )}
 
-      {!waitingForFirstToken && (
+      {showResponse && (!activeQuestion || stream.displayed || stream.isTyping) && (
         <MarkdownStream
           content={stream.displayed}
           streaming={stream.isTyping}
-          placeholder={ASK_PLACEHOLDER}
+          placeholder={activeQuestion ? undefined : ASK_PLACEHOLDER}
         />
       )}
     </div>

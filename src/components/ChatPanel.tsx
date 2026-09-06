@@ -7,16 +7,21 @@ import { MarkdownStream } from './MarkdownStream';
 
 export function ChatPanel() {
   const [message, setMessage] = useState('');
+  const [activeMessage, setActiveMessage] = useState('');
   const closeRef = useRef<(() => void) | null>(null);
   const stream = useStreamingText();
 
   const handleSend = () => {
-    if (!message.trim() || stream.isTyping) return;
+    const trimmed = message.trim();
+    if (!trimmed || stream.isTyping) return;
+
+    setActiveMessage(trimmed);
+    setMessage('');
     stream.reset();
     stream.startReceiving();
 
     closeRef.current = streamChat(
-      message.trim(),
+      trimmed,
       stream.appendChunk,
       () => stream.finishReceiving(),
       () => stream.finishReceiving(),
@@ -30,6 +35,7 @@ export function ChatPanel() {
   };
 
   const waitingForFirstToken = stream.isReceiving && !stream.displayed;
+  const showResponse = !waitingForFirstToken;
 
   return (
     <div className="panel">
@@ -57,13 +63,15 @@ export function ChatPanel() {
         )}
       </div>
 
+      {activeMessage && <p className="submitted-prompt">{activeMessage}</p>}
+
       {waitingForFirstToken && <LoadingDots label={CHAT_LOADING} />}
 
-      {!waitingForFirstToken && (
+      {showResponse && (!activeMessage || stream.displayed || stream.isTyping) && (
         <MarkdownStream
           content={stream.displayed}
           streaming={stream.isTyping}
-          placeholder={CHAT_EMPTY}
+          placeholder={activeMessage ? undefined : CHAT_EMPTY}
         />
       )}
     </div>
