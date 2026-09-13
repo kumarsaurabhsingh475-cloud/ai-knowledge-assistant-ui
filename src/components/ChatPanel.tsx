@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { streamChat } from '../api/client';
 import { CHAT_EMPTY, CHAT_LOADING, CHAT_PLACEHOLDER } from '../config/branding';
+import { usePendingRequest } from '../context/PendingRequestContext';
 import { useStreamingText } from '../hooks/useStreamingText';
 import { LoadingDots } from './LoadingDots';
 import { MarkdownStream } from './MarkdownStream';
@@ -10,6 +11,17 @@ export function ChatPanel() {
   const [activeMessage, setActiveMessage] = useState('');
   const closeRef = useRef<(() => void) | null>(null);
   const stream = useStreamingText();
+  const { registerPending, clearPending } = usePendingRequest();
+
+  const abortRequest = useCallback(() => {
+    closeRef.current?.();
+    closeRef.current = null;
+    stream.finishReceiving();
+    stream.flush();
+    clearPending('chat');
+  }, [stream, clearPending]);
+
+  useEffect(() => () => clearPending('chat'), [clearPending]);
 
   const handleSend = () => {
     const trimmed = message.trim();
@@ -23,15 +35,20 @@ export function ChatPanel() {
     closeRef.current = streamChat(
       trimmed,
       stream.appendChunk,
-      () => stream.finishReceiving(),
-      () => stream.finishReceiving(),
+      () => {
+        clearPending('chat');
+        stream.finishReceiving();
+      },
+      () => {
+        clearPending('chat');
+        stream.finishReceiving();
+      },
     );
+    registerPending('chat', abortRequest);
   };
 
   const handleStop = () => {
-    closeRef.current?.();
-    stream.finishReceiving();
-    stream.flush();
+    abortRequest();
   };
 
   const waitingForFirstToken = stream.isReceiving && !stream.displayed;

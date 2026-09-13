@@ -28,3 +28,12 @@ export const CHAT_EMPTY = 'Start a conversation. Replies appear as they are writ
 export const NAV_RAG = 'RAG';
 
 export const NAV_CHAT = 'Chat';
+
+export const NAV_GUARD_TITLE = 'Request still running';
+
+export const NAV_GUARD_BODY =
+  'The server is still working on your current request. Switch tabs anyway? The in-progress request will be stopped.';
+
+export const NAV_GUARD_STAY = 'Stay here';
+
+export const NAV_GUARD_LEAVE = 'Switch and stop';

@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { streamAsk } from '../api/client';
 import { ASK_LOADING, ASK_PLACEHOLDER } from '../config/branding';
+import { usePendingRequest } from '../context/PendingRequestContext';
 import { useStreamingText } from '../hooks/useStreamingText';
 import { LoadingDots } from './LoadingDots';
 import { MarkdownStream } from './MarkdownStream';
@@ -11,6 +12,17 @@ export function AskPanel() {
   const [error, setError] = useState('');
   const closeRef = useRef<(() => void) | null>(null);
   const stream = useStreamingText();
+  const { registerPending, clearPending } = usePendingRequest();
+
+  const abortRequest = useCallback(() => {
+    closeRef.current?.();
+    closeRef.current = null;
+    stream.finishReceiving();
+    stream.flush();
+    clearPending('ask');
+  }, [stream, clearPending]);
+
+  useEffect(() => () => clearPending('ask'), [clearPending]);
 
   const handleSubmit = () => {
     const trimmed = question.trim();
@@ -25,18 +37,21 @@ export function AskPanel() {
     closeRef.current = streamAsk(
       trimmed,
       stream.appendChunk,
-      () => stream.finishReceiving(),
+      () => {
+        clearPending('ask');
+        stream.finishReceiving();
+      },
       (msg) => {
         setError(msg);
+        clearPending('ask');
         stream.finishReceiving();
       },
     );
+    registerPending('ask', abortRequest);
   };
 
   const handleStop = () => {
-    closeRef.current?.();
-    stream.finishReceiving();
-    stream.flush();
+    abortRequest();
   };
 
   const waitingForFirstToken = stream.isReceiving && !stream.displayed;

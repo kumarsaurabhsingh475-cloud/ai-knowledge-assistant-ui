@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { IngestPanel } from './components/IngestPanel';
 import { AskPanel } from './components/AskPanel';
 import { ChatPanel } from './components/ChatPanel';
+import { NavigationGuardModal } from './components/NavigationGuardModal';
 import { PanelShell } from './components/PanelShell';
 import { FooterTech } from './components/FooterTech';
 import { SocialLinks } from './components/SocialLinks';
@@ -15,6 +16,7 @@ import {
   NAV_RAG,
   UPLOAD_DESC,
 } from './config/branding';
+import { usePendingRequest } from './context/PendingRequestContext';
 import './App.css';
 
 type DocsTab = 'ingest' | 'ask';
@@ -36,6 +38,8 @@ export default function App() {
   const [mode, setMode] = useState<Mode>('docs');
   const [docsTab, setDocsTab] = useState<DocsTab>('ingest');
   const [theme, setTheme] = useState(getInitialTheme);
+  const [pendingMode, setPendingMode] = useState<Mode | null>(null);
+  const { isPending, cancelPending } = usePendingRequest();
 
   const activeTab: Tab = mode === 'chat' ? 'chat' : docsTab;
 
@@ -50,6 +54,27 @@ export default function App() {
   useEffect(() => {
     document.title = mode === 'chat' ? `${APP_NAME} - Chat` : APP_NAME;
   }, [mode]);
+
+  const requestModeChange = (next: Mode) => {
+    if (next === mode) return;
+    if (isPending) {
+      setPendingMode(next);
+      return;
+    }
+    setMode(next);
+  };
+
+  const handleStay = () => {
+    setPendingMode(null);
+  };
+
+  const handleLeave = () => {
+    cancelPending();
+    if (pendingMode) {
+      setMode(pendingMode);
+    }
+    setPendingMode(null);
+  };
 
   return (
     <div className="page-shell">
@@ -66,14 +91,14 @@ export default function App() {
           <button
             type="button"
             className={`segment-btn ${mode === 'docs' ? 'active' : ''}`}
-            onClick={() => setMode('docs')}
+            onClick={() => requestModeChange('docs')}
           >
             {NAV_RAG}
           </button>
           <button
             type="button"
             className={`segment-btn ${mode === 'chat' ? 'active' : ''}`}
-            onClick={() => setMode('chat')}
+            onClick={() => requestModeChange('chat')}
           >
             {NAV_CHAT}
           </button>
@@ -116,6 +141,8 @@ export default function App() {
           <SocialLinks />
         </footer>
       </div>
+
+      <NavigationGuardModal open={pendingMode !== null} onStay={handleStay} onLeave={handleLeave} />
     </div>
   );
 }

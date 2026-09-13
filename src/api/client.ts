@@ -34,10 +34,10 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return body as T;
 }
 
-export async function ingestPdf(file: File): Promise<ApiResponse<null>> {
+export async function ingestPdf(file: File, signal?: AbortSignal): Promise<ApiResponse<null>> {
   const form = new FormData();
   form.append('file', file);
-  const response = await fetch(`${BASE}/ingest`, { method: 'POST', body: form });
+  const response = await fetch(`${BASE}/ingest`, { method: 'POST', body: form, signal });
   return handleResponse(response);
 }
 

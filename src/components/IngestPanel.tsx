@@ -1,15 +1,27 @@
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ingestPdf } from '../api/client';
 import { UPLOAD_BUTTON, UPLOAD_LOADING, UPLOAD_SUCCESS } from '../config/branding';
+import { usePendingRequest } from '../context/PendingRequestContext';
 import { LoadingDots } from './LoadingDots';
 
 export function IngestPanel() {
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<(() => void) | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const { registerPending, clearPending } = usePendingRequest();
+
+  const abortRequest = useCallback(() => {
+    abortRef.current?.();
+    abortRef.current = null;
+    setLoading(false);
+    clearPending('ingest');
+  }, [clearPending]);
+
+  useEffect(() => () => clearPending('ingest'), [clearPending]);
 
   const handleFileChange = (selected: File | null) => {
     if (selected && selected.type !== 'application/pdf' && !selected.name.toLowerCase().endsWith('.pdf')) {
@@ -22,17 +34,26 @@ export function IngestPanel() {
 
   const handleSubmit = async () => {
     if (!file) return;
+
+    const controller = new AbortController();
+    abortRef.current = () => controller.abort();
+    registerPending('ingest', abortRequest);
+
     setLoading(true);
     setMessage('');
     setError('');
+
     try {
-      await ingestPdf(file);
+      await ingestPdf(file, controller.signal);
       setMessage(UPLOAD_SUCCESS);
       setFile(null);
       if (inputRef.current) inputRef.current.value = '';
     } catch (err) {
+      if (controller.signal.aborted) return;
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
+      abortRef.current = null;
+      clearPending('ingest');
       setLoading(false);
     }
   };
